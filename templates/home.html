@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Gram Connect - Home{% endblock %}
+
+{% block content %}
+<!-- Main Login Page -->
+<div id="main-page">
+    <div class="container">
+        <div class="login-options">
+            <!-- Shopkeeper Login Card -->
+            <div class="login-card shopkeeper">
+                <div class="login-icon">🛍️</div>
+                <h2>Shopkeeper</h2>
+                <p>Manage your products, inventory, and view incoming orders from customers.</p>
+                <a href="{% url 'shopkeeper_login' %}" class="btn btn-shopkeeper">Login as Shopkeeper</a>
+                <a href="{% url 'shopkeeper_register' %}" class="btn btn-shopkeeper-outline">Register Shop</a>
+            </div>
+            
+            <!-- Customer Login Card -->
+            <div class="login-card customer">
+                <div class="login-icon">👨‍💼</div>
+                <h2>Customer</h2>
+                <p>Browse products, add to cart, and place orders with your preferred delivery time.</p>
+                <a href="{% url 'customer_login' %}" class="btn btn-customer">Login as Customer</a>
+                <a href="{% url 'customer_register' %}" class="btn btn-customer-outline">Register Account</a>
+            </div>
+            
+            <!-- Delivery Login Card -->
+            <div class="login-card delivery">
+                <div class="login-icon">🚚</div>
+                <h2>Delivery Partner</h2>
+                <p>View ready orders, pick up packages, and deliver to customers efficiently.</p>
+                <a href="{% url 'delivery_login' %}" class="btn btn-delivery">Login as Delivery</a>
+                <a href="{% url 'delivery_register' %}" class="btn btn-delivery-outline">Apply as Partner</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_css %}
+<style>
+/* Additional styles for navigation buttons */
+.login-card {
+    text-align: center;
+    padding: 30px;
+    margin: 20px;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.login-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+}
+
+.login-card .btn {
+    display: inline-block;
+    margin: 10px 5px;
+    padding: 12px 24px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-shopkeeper-outline, .btn-customer-outline, .btn-delivery-outline {
+    background: transparent;
+    border: 2px solid;
+    color: inherit;
+}
+
+.btn-shopkeeper-outline:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-customer-outline:hover {
+    background: var(--secondary);
+    color: white;
+}
+
+.btn-delivery-outline:hover {
+    background: var(--accent);
+    color: white;
+}
+</style>
+{% endblock %}
+{% endblock %}

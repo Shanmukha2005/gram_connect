@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gram Connect{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'gram.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% block header %}
+    <header>
+        <div class="container">
+            <h1>Gram Connect</h1>
+            <p>One platform for shopkeepers, customers and delivery partners</p>
+        </div>
+    </header>
+    {% endblock %}
+
+    {% block content %}{% endblock %}
+
+    <!-- Django messages display -->
+    {% if messages %}
+    <div style="position: fixed; top: 10px; right: 10px; z-index: 2000; max-width: 300px;">
+        {% for message in messages %}
+        <div style="margin-bottom: 10px; padding: 10px 15px; border-radius: 5px; color: white;
+            background: {% if message.tags == 'success' %}#28a745{% elif message.tags == 'error' %}#dc3545{% else %}#007bff{% endif %};">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block footer %}
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Gram Connect. All rights reserved.</p>
+        </div>
+    </footer>
+    {% endblock %}
+
+    <!-- Ensure DOM is loaded before JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load the main script after DOM is ready
+            var script = document.createElement('script');
+            script.src = "{% static 'gram.js' %}";
+            document.head.appendChild(script);
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

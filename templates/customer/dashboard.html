@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Dashboard{% endblock %}
+
+{% block content %}
+<div style="background: white; padding: 20px; margin: 20px; border-radius: 10px; min-height: 500px;">
+    <div class="dashboard-header" style="border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px;">
+        <h1 style="color: #333; margin-bottom: 10px;">🛒 Customer Dashboard</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <p style="color: #666;">Welcome, <span onclick="showDebugModal()" style="color: #007bff; cursor: pointer; text-decoration: underline;">{{ customer.name }}</span>!</p>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <!-- Cart Icon -->
+                <button onclick="showCart()" style="background: #007bff; color: white; padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; position: relative;">
+                    🛒 Cart
+                    <span id="cart-count" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center;">0</span>
+                </button>
+                
+                <!-- Orders Button -->
+                <button onclick="showOrders()" style="background: #28a745; color: white; padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer;">
+                    📋 Orders
+                </button>
+                
+                <!-- Logout Button -->
+                <a href="{% url 'logout' %}" style="background: #dc3545; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;">Logout</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 10px; margin-bottom: 15px; border-radius: 5px; 
+                       {% if message.tags == 'success' %}background: #d4edda; color: #155724; border: 1px solid #c3e6cb;{% endif %}
+                       {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- Available Products Section -->
+    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
+        <h3 style="margin-bottom: 15px; color: #333;">Available Products ({{ products|length }})</h3>
+        
+        <!-- Search Bar -->
+        <div style="margin-bottom: 20px;">
+            <input type="text" id="productSearch" placeholder="Search products by name..." 
+                   style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px;"
+                   onkeyup="filterProducts()">
+        </div>
+        
+        <div id="products-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+            {% if products %}
+                {% for product in products %}
+                <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f9f9f9;">
+                    <h3 style="color: #333; margin-bottom: 10px;">{{ product.name }}</h3>
+                    {% if product.image %}
+                    <img src="{{ product.image }}" alt="{{ product.name }}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 5px; margin-bottom: 10px;" />
+                    {% endif %}
+                    <p style="font-size: 1.2em; font-weight: bold; color: #007bff; margin-bottom: 5px;">₹{{ product.price }}</p>
+                    <p style="color: #666; margin-bottom: 5px;">Quantity: {{ product.quantity }}</p>
+                    <p style="color: #666; margin-bottom: 5px;">Shop: {{ product.shopkeeper.name }}</p>
+                    <p style="color: #666; margin-bottom: 15px;">{{ product.description }}</p>
+                    <button onclick="addToCart({{ product.id }}, '{{ product.name|escapejs }}', {{ product.price }}, '{{ product.shopkeeper.name|escapejs }}')" 
+                            style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; width: 100%;">
+                        🛒 Add to Cart
+                    </button>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; padding: 40px;">
+                    <p style="color: #666; font-size: 1.1em;">No products available yet.</p>
+                    <p style="color: #666;">Check back later for new products!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Cart Modal -->
+    <div id="cart-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #333;">🛒 Your Cart</h3>
+                <button onclick="closeCart()" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">×</button>
+            </div>
+            
+            <div id="cart-items" style="margin-bottom: 20px;">
+                <!-- Cart items will be populated here -->
+            </div>
+            
+            <div style="border-top: 2px solid #eee; padding-top: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <strong style="font-size: 1.2em;">Total: ₹<span id="cart-total">0</span></strong>
+                    <button onclick="checkout()" style="background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                        🛒 Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Orders Modal -->
+    <div id="orders-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #333;">📋 Your Orders</h3>
+                <button onclick="closeOrders()" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">×</button>
+            </div>
+            
+            <div id="orders-list">
+                {% if orders %}
+                    {% for order in orders %}
+                    <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f9f9f9; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; color: #333;">Order #{{ order.id }}</h4>
+                            <span style="background: 
+                                {% if order.status == 'pending' %}#ffc107{% elif order.status == 'confirmed' %}#007bff{% elif order.status == 'ready' %}#28a745{% elif order.status == 'delivered' %}#6c757d{% else %}#dc3545{% endif %}; 
+                                color: {% if order.status == 'pending' %}black{% else %}white{% endif %}; 
+                                padding: 4px 8px; border-radius: 4px; font-size: 0.9em;">
+                                {{ order.status|title }}
+                            </span>
+                        </div>
+                        <p style="color: #666; margin-bottom: 5px;">Shop: {{ order.shopkeeper.name }}</p>
+                        <p style="color: #666; margin-bottom: 5px;">Total: ₹{{ order.total_amount }}</p>
+                        <p style="color: #666; margin-bottom: 5px;">Order Date: {{ order.date|date:"M d, Y H:i" }}</p>
+                        <p style="color: #666; margin-bottom: 10px;">Delivery Address: {{ order.delivery_address }}</p>
+                        
+                        <!-- Order Items -->
+                        <div style="background: white; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                            <strong style="color: #333;">Items:</strong>
+                            <div style="margin-top: 5px;">
+                                {% for item in order.items.all %}
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                    <span>{{ item.product.name }} × {{ item.quantity }}</span>
+                                    <span>₹{{ item.price }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 40px;">
+                        <p style="color: #666; font-size: 1.1em;">No orders yet.</p>
+                        <p style="color: #666;">Start shopping to place your first order!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #333;">🛒 Checkout</h3>
+                <button onclick="closeCheckout()" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">×</button>
+            </div>
+            
+            <!-- Order Summary -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #333;">Order Summary</h4>
+                <div id="checkout-items" style="margin-bottom: 10px;">
+                    <!-- Items will be populated here -->
+                </div>
+                <div style="border-top: 1px solid #ddd; padding-top: 10px;">
+                    <strong style="font-size: 1.1em;">Total: ₹<span id="checkout-total">0</span></strong>
+                </div>
+            </div>
+            
+            <!-- Checkout Form -->
+            <form id="checkout-form" method="post" action="{% url 'checkout' %}" style="display: grid; gap: 15px;">
+                {% csrf_token %}
+                <input type="hidden" id="cart-data" name="cart_data">
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Full Name</label>
+                    <input type="text" name="full_name" value="{{ customer.name }}" required 
+                           style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Phone Number</label>
+                    <input type="tel" name="phone" placeholder="Enter your phone number" required
+                           style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Delivery Address</label>
+                    <textarea name="address" placeholder="Enter your full delivery address" rows="3" required
+                              style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Payment Method</label>
+                    <select name="payment_method" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        <option value="">Select payment method</option>
+                        <option value="cash_on_delivery">Cash on Delivery</option>
+                        <option value="online_payment">Online Payment</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Special Instructions (Optional)</label>
+                    <textarea name="instructions" placeholder="Any special delivery instructions..." rows="2"
+                              style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" style="background: #28a745; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; flex: 1; font-size: 1.1em;">
+                        🛒 Place Order
+                    </button>
+                    <button type="button" onclick="closeCheckout()" style="background: #6c757d; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; flex: 1;">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Debug Modal -->
+    <div id="debug-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #333;">🔍 Debug Information</h3>
+                <button onclick="closeDebugModal()" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">×</button>
+            </div>
+            
+            <div>
+                <h4 style="margin: 0 0 10px 0; color: #333;">Session Information</h4>
+                <p style="color: #666;">Customer: {{ customer.name }} ({{ customer.email }})</p>
+                <p style="color: #666;">Available Products: {{ products|length }}</p>
+                <p style="color: #666;">Your Orders: {{ orders|length }}</p>
+                <p style="color: #666;">Customer ID: {{ customer.id }}</p>
+            </div>
+            
+            <div style="border-top: 1px solid #ddd; padding-top: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #333;">System Information</h4>
+                <p style="color: #666;">Browser: {{ request.META.HTTP_USER_AGENT }}</p>
+                <p style="color: #666;">IP Address: {{ request.META.REMOTE_ADDR }}</p>
+                <p style="color: #666;">Server Time: {{ request.META.DATE }}</p>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+// Cart functionality
+let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+
+// Update cart count on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateCartCount();
+    
+    // Check for success messages that indicate successful checkout
+    const messages = document.querySelectorAll('[style*="background: #d4edda"]');
+    messages.forEach(message => {
+        if (message.textContent.includes('Order placed successfully') || message.textContent.includes('orders placed successfully')) {
+            // Clear cart after successful checkout
+            cart = [];
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartCount();
+        }
+    });
+});
+
+function addToCart(productId, productName, productPrice, shopName) {
+    // Check if item already exists in cart
+    const existingItem = cart.find(item => item.id === productId);
+    
+    if (existingItem) {
+        existingItem.quantity += 1;
+    } else {
+        cart.push({
+            id: productId,
+            name: productName,
+            price: productPrice,
+            shop: shopName,
+            quantity: 1
+        });
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('cart', JSON.stringify(cart));
+    
+    // Update cart count
+    updateCartCount();
+    
+    // Show success message
+    showMessage(`Added "${productName}" to cart!`, 'success');
+}
+
+function updateCartCount() {
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    document.getElementById('cart-count').textContent = totalItems;
+}
+
+function showCart() {
+    const cartModal = document.getElementById('cart-modal');
+    const cartItems = document.getElementById('cart-items');
+    const cartTotal = document.getElementById('cart-total');
+    
+    // Clear existing items
+    cartItems.innerHTML = '';
+    
+    if (cart.length === 0) {
+        cartItems.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Your cart is empty</p>';
+        cartTotal.textContent = '0';
+    } else {
+        let total = 0;
+        cart.forEach((item, index) => {
+            const itemTotal = item.price * item.quantity;
+            total += itemTotal;
+            
+            cartItems.innerHTML += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee;">
+                    <div>
+                        <h4 style="margin: 0; color: #333;">${item.name}</h4>
+                        <p style="margin: 0; color: #666; font-size: 0.9em;">Shop: ${item.shop}</p>
+                        <p style="margin: 0; color: #007bff; font-weight: bold;">₹${item.price} each</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button onclick="updateQuantity(${index}, -1)" style="background: #dc3545; color: white; border: none; border-radius: 3px; width: 25px; height: 25px; cursor: pointer;">-</button>
+                        <span style="font-weight: bold;">${item.quantity}</span>
+                        <button onclick="updateQuantity(${index}, 1)" style="background: #28a745; color: white; border: none; border-radius: 3px; width: 25px; height: 25px; cursor: pointer;">+</button>
+                        <button onclick="removeFromCart(${index})" style="background: #dc3545; color: white; border: none; border-radius: 3px; padding: 5px 8px; cursor: pointer;">Remove</button>
+                    </div>
+                </div>
+            `;
+        });
+        cartTotal.textContent = total.toFixed(2);
+    }
+    
+    cartModal.style.display = 'block';
+}
+
+function updateQuantity(index, change) {
+    if (cart[index].quantity + change <= 0) {
+        removeFromCart(index);
+    } else {
+        cart[index].quantity += change;
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartCount();
+        showCart(); // Refresh cart display
+    }
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCartCount();
+    showCart(); // Refresh cart display
+}
+
+function closeCart() {
+    document.getElementById('cart-modal').style.display = 'none';
+}
+
+function showOrders() {
+    document.getElementById('orders-modal').style.display = 'block';
+}
+
+function closeOrders() {
+    document.getElementById('orders-modal').style.display = 'none';
+}
+
+function checkout() {
+    if (cart.length === 0) {
+        showMessage('Your cart is empty!', 'error');
+        return;
+    }
+    
+    // Show checkout modal
+    showCheckoutModal();
+}
+
+function showCheckoutModal() {
+    const checkoutModal = document.getElementById('checkout-modal');
+    const checkoutItems = document.getElementById('checkout-items');
+    const checkoutTotal = document.getElementById('checkout-total');
+    const cartDataInput = document.getElementById('cart-data');
+    
+    // Clear existing items
+    checkoutItems.innerHTML = '';
+    
+    // Populate order summary
+    let total = 0;
+    cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        
+        checkoutItems.innerHTML += `
+            <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
+                <span>${item.name} × ${item.quantity}</span>
+                <span>₹${itemTotal.toFixed(2)}</span>
+            </div>
+        `;
+    });
+    
+    checkoutTotal.textContent = total.toFixed(2);
+    
+    // Set cart data for form submission
+    cartDataInput.value = JSON.stringify(cart);
+    
+    // Show modal
+    checkoutModal.style.display = 'block';
+}
+
+function closeCheckout() {
+    document.getElementById('checkout-modal').style.display = 'none';
+}
+
+// Handle checkout form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const checkoutForm = document.getElementById('checkout-form');
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', function(e) {
+            // Form will submit normally, but we'll show a loading message
+            const submitButton = this.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.textContent = 'Processing...';
+                submitButton.disabled = true;
+            }
+        });
+    }
+});
+
+// Close modals when clicking outside
+document.getElementById('cart-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeCart();
+});
+
+document.getElementById('orders-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeOrders();
+});
+
+document.getElementById('checkout-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeCheckout();
+});
+
+function showDebugModal() {
+    document.getElementById('debug-modal').style.display = 'block';
+}
+
+function closeDebugModal() {
+    document.getElementById('debug-modal').style.display = 'none';
+}
+
+function showMessage(message, type) {
+    // Create a temporary message element
+    const messageDiv = document.createElement('div');
+    messageDiv.style.cssText = `
+        position: fixed; top: 20px; right: 20px; z-index: 2000;
+        padding: 10px 15px; border-radius: 5px; color: white;
+        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#007bff'};
+    `;
+    messageDiv.textContent = message;
+    
+    document.body.appendChild(messageDiv);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        document.body.removeChild(messageDiv);
+    }, 3000);
+}
+
+function filterProducts() {
+    const searchInput = document.getElementById('productSearch');
+    const productsGrid = document.getElementById('products-grid');
+    const products = productsGrid.children;
+    
+    const searchQuery = searchInput.value.toLowerCase();
+    
+    for (let i = 0; i < products.length; i++) {
+        const productName = products[i].querySelector('h3').textContent.toLowerCase();
+        
+        if (productName.includes(searchQuery)) {
+            products[i].style.display = 'block';
+        } else {
+            products[i].style.display = 'none';
+        }
+    }
+}
+</script>
+{% endblock %}

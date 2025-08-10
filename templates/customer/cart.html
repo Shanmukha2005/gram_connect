@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Your Cart{% endblock %}
+{% block content %}
+<div class="cart-modal container">
+    <h2>Your Cart</h2>
+    <div id="cart-items">
+        {% if cart_items %}
+            {% for item in cart_items %}
+            <div class="cart-item">
+                <h3>{{ item.product.name }}</h3>
+                <p>Quantity: {{ item.quantity }}</p>
+                <p>Price: ₹{{ item.product.price }}</p>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>Your cart is empty</p>
+        {% endif %}
+    </div>
+    <a href="{% url 'place_order' %}" class="btn btn-customer">Proceed to Checkout</a>
+</div>
+{% endblock %}

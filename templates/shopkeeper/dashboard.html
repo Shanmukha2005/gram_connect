@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Shopkeeper Dashboard{% endblock %}
+
+{% block content %}
+<div style="background: white; padding: 20px; margin: 20px; border-radius: 10px; min-height: 500px;">
+    <div class="dashboard-header" style="border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px;">
+        <h1 style="color: #333; margin-bottom: 10px;">🛍️ Shopkeeper Dashboard</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <p style="color: #666;">Welcome, {{ shopkeeper.name }}!</p>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <button onclick="showOrdersModal()" style="background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;">
+                    📋 Orders 
+                    <span style="background: #fff; color: #007bff; padding: 2px 6px; border-radius: 10px; font-size: 12px;">{{ pending_orders_count }}</span>
+                </button>
+                <a href="{% url 'logout' %}" style="background: #dc3545; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;">Logout</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Product Form -->
+    <div style="margin-bottom: 30px; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+        <h2 style="color: #333; margin-bottom: 15px;">Add New Product</h2>
+        <form method="post" action="{% url 'add_product' %}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            {% csrf_token %}
+            <div>
+                <label style="display: block; margin-bottom: 5px; color: #333;">Product Name</label>
+                <input type="text" name="name" placeholder="Enter product name" required 
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; color: #333;">Price (₹)</label>
+                <input type="number" name="price" placeholder="Enter price" min="1" step="0.01" required
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; color: #333;">Quantity</label>
+                <input type="text" name="quantity" placeholder="e.g., 1kg, 500ml, 10 pieces" required
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; color: #333;">Image URL (Optional)</label>
+                <input type="url" name="image" placeholder="https://example.com/image.jpg"
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; color: #333;">Description</label>
+                <textarea name="description" placeholder="Enter product description" rows="3"
+                          style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
+            </div>
+            
+            <div style="grid-column: 1 / -1;">
+                <button type="submit" style="background: #28a745; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; flex: 1;">
+                    ➕ Add Product
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Orders Section -->
+<button onclick="showOrdersModal()" style="background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;">
+        📋 Orders 
+        <span style="background: #fff; color: #007bff; padding: 2px 6px; border-radius: 10px; font-size: 12px;">{{ pending_orders_count }}</span>
+    </button>
+
+    <!-- Orders Modal -->
+    <div id="orders-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #333;">📋 Your Orders</h3>
+                <button onclick="closeOrdersModal()" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">×</button>
+            </div>
+
+            {% if orders %}
+<div id="orders-container" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                    {% for order in orders %}
+                    <div class="order-item" style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f9f9f9;">
+                        <h3 style="color: #333;">Order #{{ order.id }}</h3>
+                    <p><strong>Status:</strong> 
+                        <span id="order-status-{{ order.id }}" style="padding: 4px 8px; border-radius: 4px; background: 
+                            {% if order.status == 'pending' %}#ffc107{% elif order.status == 'confirmed' %}#007bff{% elif order.status == 'ready' %}#28a745{% elif order.status == 'delivered' %}#6c757d{% else %}#dc3545{% endif %};
+                            color: {% if order.status == 'pending' %}black{% else %}white{% endif %}; font-size: 0.9em;">
+                            {{ order.status|title }}
+                        </span>
+                    </p>
+                    {% if order.status == 'pending' %}
+                        <button id="mark-ready-btn-{{ order.id }}" onclick="markAsReady({{ order.id }})" style="background: #28a745; color: white; border: none; border-radius: 5px; padding: 6px 12px; cursor: pointer; margin-top: 5px;">
+                            Mark as Ready
+                        </button>
+                    {% endif %}
+                        <p><strong>Date:</strong> {{ order.date|date:"M d, Y" }}</p>
+                        <p><strong>Total:</strong> ${{ order.total_amount }}</p>
+
+                        <h4>Items:</h4>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items.all %}
+                                <tr>
+                                    <td>{{ item.product.name }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>${{ item.price }}</td>
+                                    <td>${{ item.quantity|floatformat:2|add:item.price|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px;">
+                    <p style="color: #666; font-size: 18px;">No orders yet. When customers place orders, they will appear here.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function showOrdersModal() {
+            document.getElementById('orders-modal').style.display = 'block';
+        }
+
+        function closeOrdersModal() {
+            document.getElementById('orders-modal').style.display = 'none';
+        }
+
+        // Auto-scroll functionality for orders
+        function autoScrollOrders() {
+            const ordersContainer = document.getElementById('orders-container');
+            if (ordersContainer) {
+                ordersContainer.scrollTop = ordersContainer.scrollHeight;
+            }
+        }
+
+        // Initialize auto-scroll when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            autoScrollOrders();
+        });
+
+        // Refresh orders every 30 seconds
+        setInterval(function() {
+            // This would typically make an AJAX call to refresh orders
+            console.log('Refreshing orders...');
+        }, 30000);
+        function markAsReady(orderId) {
+            const csrftoken = getCookie('csrftoken');
+            fetch(`/shopkeeper/update-order/${orderId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: new URLSearchParams({
+                    'status': 'ready'
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Update status badge
+                    const statusSpan = document.getElementById(`order-status-${orderId}`);
+                    if (statusSpan) {
+                        statusSpan.textContent = 'Ready for Delivery';
+                        statusSpan.style.backgroundColor = '#28a745';
+                        statusSpan.style.color = 'white';
+                    }
+                    // Hide the "Mark as Ready" button after update
+                    const button = document.querySelector(`#mark-ready-btn-${orderId}`);
+                    if (button) {
+                        button.style.display = 'none';
+                    }
+                    alert(`Order #${orderId} marked as ready for delivery.`);
+                } else {
+                    alert('Failed to update order status.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating order status.');
+            });
+        }
+
+        // Helper function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</div>
+{% endblock %}

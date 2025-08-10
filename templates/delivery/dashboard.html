@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+
+{% block title %}Delivery Dashboard{% endblock %}
+
+{% block content %}
+<div style="background: white; padding: 20px; margin: 20px; border-radius: 10px; min-height: 500px;">
+    <div class="dashboard-header" style="border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px;">
+        <h1 style="color: #333; margin-bottom: 10px;">🚚 Delivery Partner Dashboard</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <p style="color: #666;">Welcome, <span onclick="showDebugModal()" style="color: #007bff; cursor: pointer; text-decoration: underline;">{{ delivery_partner.name }}</span>!</p>
+            <div>
+                <a href="{% url 'logout' %}" style="background: #dc3545; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;">Logout</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 10px; margin-bottom: 15px; border-radius: 5px; 
+                       {% if message.tags == 'success' %}background: #d4edda; color: #155724; border: 1px solid #c3e6cb;{% endif %}
+                       {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- Available Orders Section -->
+    <div style="margin-bottom: 30px;">
+        <h2 style="color: #333; margin-bottom: 15px;">📦 Available Orders for Delivery ({{ available_orders|length }})</h2>
+        {% if available_orders %}
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                {% for order in available_orders %}
+                <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f9f9f9;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="color: #333; margin: 0;">Order #{{ order.id }}</h3>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="background: 
+                                {% if order.status == 'confirmed' %}#007bff{% elif order.status == 'ready' %}#28a745{% else %}#ffc107{% endif %}; 
+                                color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.9em;">
+                                {{ order.status|title }}
+                            </span>
+                            {% if order.status == 'ready' %}
+                            <form method="post" action="{% url 'accept_delivery_order' order.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" style="background: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;" 
+                                        onclick="return confirm('Are you sure you want to accept this delivery order?')">
+                                    Accept Delivery
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+                        <div>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Customer:</strong> {{ order.delivery_name }}</p>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Phone:</strong> {{ order.delivery_phone }}</p>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Shop:</strong> {{ order.shopkeeper.name }}</p>
+                        </div>
+                        <div>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Total:</strong> ₹{{ order.total_amount }}</p>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Payment:</strong> {{ order.payment_method|title }}</p>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Order Date:</strong> {{ order.date|date:"M d, Y H:i" }}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 10px;">
+                        <p style="color: #666; margin-bottom: 5px;"><strong>Delivery Address:</strong></p>
+                        <p style="color: #333; background: white; padding: 8px; border-radius: 4px; margin: 0;">{{ order.delivery_address }}</p>
+                    </div>
+                    
+                    {% if order.special_instructions %}
+                    <div style="margin-bottom: 10px;">
+                        <p style="color: #666; margin-bottom: 5px;"><strong>Special Instructions:</strong></p>
+                        <p style="color: #333; background: #fff3cd; padding: 8px; border-radius: 4px; margin: 0;">{{ order.special_instructions }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px;">
+                <p style="font-size: 1.1em; color: #666;">No orders available for delivery.</p>
+                <p style="color: #666;">Orders will appear here when they are ready for delivery.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Assigned Orders Section -->
+    <div style="margin-bottom: 30px;">
+        <h2 style="color: #333; margin-bottom: 15px;">🚛 Your Assigned Deliveries ({{ assigned_orders|length }})</h2>
+        {% if assigned_orders %}
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                {% for order in assigned_orders %}
+                <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f0f8ff;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="color: #333; margin: 0;">Order #{{ order.id }}</h3>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="background: 
+                                {% if order.status == 'out_for_delivery' %}#ffc107{% elif order.status == 'delivered' %}#6c757d{% else %}#007bff{% endif %}; 
+                                color: {% if order.status == 'out_for_delivery' %}black{% else %}white{% endif %}; 
+                                padding: 4px 8px; border-radius: 4px; font-size: 0.9em;">
+                                {% if order.status == 'out_for_delivery' %}Out for Delivery{% else %}{{ order.status|title }}{% endif %}
+                            </span>
+                            {% if order.status == 'assigned' %}
+                            <form method="post" action="{% url 'update_delivery_status' order.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="out_for_delivery">
+                                <button type="submit" style="background: #007bff; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer;" 
+                                        onclick="return confirm('Are you sure you want to start this delivery?')">
+                                    Start Delivery
+                                </button>
+                            </form>
+                            {% elif order.status == 'out_for_delivery' %}
+                            <form method="post" action="{% url 'update_delivery_status' order.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="delivered">
+                                <button type="submit" style="background: #28a745; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer;" 
+                                        onclick="return confirm('Are you sure you want to mark this order as delivered?')">
+                                    Mark Delivered
+                                </button>
+                            </form>
+                            {% elif order.status == 'delivered' %}
+                            <div style="background: #d1ecf1; color: #0c5460; padding: 8px 12px; border-radius: 4px; text-align: center;">
+                                ✅ Delivered
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+                        <div>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Customer:</strong> {{ order.delivery_name }}</p>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Phone:</strong> {{ order.delivery_phone }}</p>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Shop:</strong> {{ order.shopkeeper.name }}</p>
+                        </div>
+                        <div>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Total:</strong> ₹{{ order.total_amount }}</p>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Payment:</strong> {{ order.payment_method|title }}</p>
+                            <p style="color: #666; margin-bottom: 5px;"><strong>Assigned:</strong> {{ order.date|date:"M d, Y H:i" }}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 10px;">
+                        <p style="color: #666; margin-bottom: 5px;"><strong>Delivery Address:</strong></p>
+                        <p style="color: #333; background: white; padding: 8px; border-radius: 4px; margin: 0;">{{ order.delivery_address }}</p>
+                    </div>
+                    
+                    {% if order.special_instructions %}
+                    <div style="margin-bottom: 10px;">
+                        <p style="color: #666; margin-bottom: 5px;"><strong>Special Instructions:</strong></p>
+                        <p style="color: #333; background: #fff3cd; padding: 8px; border-radius: 4px; margin: 0;">{{ order.special_instructions }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px;">
+                <p style="font-size: 1.1em; color: #666;">No assigned deliveries.</p>
+                <p style="color: #666;">Accept orders from the available orders section above.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Debug Modal -->
+    <div id="debug-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #333;">🔍 Debug Information</h3>
+                <button onclick="closeDebugModal()" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">×</button>
+            </div>
+            
+            <div>
+                <h4 style="margin: 0 0 10px 0; color: #333;">Session Information</h4>
+                <p style="color: #666;">Delivery Partner: {{ delivery_partner.name }} ({{ delivery_partner.email }})</p>
+                <p style="color: #666;">Available Orders: {{ available_orders|length }}</p>
+                <p style="color: #666;">Assigned Orders: {{ assigned_orders|length }}</p>
+                <p style="color: #666;">Partner ID: {{ delivery_partner.id }}</p>
+                <p style="color: #666;">Vehicle Type: {{ delivery_partner.vehicle_type|default:"Not specified" }}</p>
+            </div>
+            
+            <div style="border-top: 1px solid #ddd; padding-top: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #333;">System Information</h4>
+                <p style="color: #666;">Browser: {{ request.META.HTTP_USER_AGENT }}</p>
+                <p style="color: #666;">IP Address: {{ request.META.REMOTE_ADDR }}</p>
+                <p style="color: #666;">Server Time: {{ request.META.DATE }}</p>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+function showMessage(message, type) {
+    // Simple message display function
+    alert(message);
+}
+
+function showDebugModal() {
+    document.getElementById('debug-modal').style.display = 'block';
+}
+
+function closeDebugModal() {
+    document.getElementById('debug-modal').style.display = 'none';
+}
+
+// Close debug modal when clicking outside
+document.getElementById('debug-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeDebugModal();
+    }
+});
+</script>
+
+{% endblock %}

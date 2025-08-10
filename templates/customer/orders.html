@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Your Orders{% endblock %}
+{% block content %}
+<div class="order-list container">
+    <h2>Your Orders</h2>
+    {% if orders %}
+        {% for order in orders %}
+        <div class="order-item">
+            <h3>Order #{{ order.id }}</h3>
+            <p><strong>Status:</strong> {{ order.status|title }}</p>
+            <p><strong>Date:</strong> {{ order.date|date:"M d, Y" }}</p>
+            <p><strong>Total:</strong> ${{ order.total_amount }}</p>
+            
+            <h4>Items:</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                    <tr>
+                        <td>{{ item.product.name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>${{ item.price }}</td>
+                        <td>${{ item.quantity|floatformat:2|add:item.price|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>You have no orders.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,343 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gram Connect</title>
+    <link rel="stylesheet" href="{% static 'css/gram.css' %}">
+</head>
+<body>
+    <!-- Main Login Page -->
+    <div id="main-page">
+        <header>
+            <div class="container">
+                <h1>Gram Connect</h1>
+                <p>One platform for shopkeepers, customers and delivery partners</p>
+            </div>
+        </header>
+        
+        <div class="container">
+            <div class="login-options">
+                <!-- Shopkeeper Login Card -->
+                <div class="login-card shopkeeper" onclick="openModal('shopkeeper')">
+                    <div class="login-icon">🛍️</div>
+                    <h2>Shopkeeper</h2>
+                    <p>Manage your products, inventory, and view incoming orders from customers.</p>
+                    <button class="btn btn-shopkeeper">Login as Shopkeeper</button>
+                </div>
+                
+                <!-- Customer Login Card -->
+                <div class="login-card customer" onclick="openModal('customer')">
+                    <div class="login-icon">👨‍💼</div>
+                    <h2>Customer</h2>
+                    <p>Browse products, add to cart, and place orders with your preferred delivery time.</p>
+                    <button class="btn btn-customer">Login as Customer</button>
+                </div>
+                
+                <!-- Delivery Login Card -->
+                <div class="login-card delivery" onclick="openModal('delivery')">
+                    <div class="login-icon">🚚</div>
+                    <h2>Delivery Partner</h2>
+                    <p>View ready orders, pick up packages, and deliver to customers efficiently.</p>
+                    <button class="btn btn-delivery">Login as Delivery</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Shopkeeper Login Modal -->
+        <div class="login-modal" id="shopkeeper-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Shopkeeper Login</h2>
+                    <span class="close-modal" onclick="closeModal('shopkeeper-modal')">&times;</span>
+                </div>
+                <form id="shopkeeper-form">
+                    <div class="form-group">
+                        <label for="shopkeeper-email">Email</label>
+                        <input type="email" id="shopkeeper-email" placeholder="Enter your shop email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="shopkeeper-password">Password</label>
+                        <input type="password" id="shopkeeper-password" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="btn btn-shopkeeper submit-btn">Login</button>
+                </form>
+                <div class="register-link">
+                    Don't have an account? <a href="#" onclick="openRegisterModal('shopkeeper')">Register your shop</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Customer Login Modal -->
+        <div class="login-modal" id="customer-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Customer Login</h2>
+                    <span class="close-modal" onclick="closeModal('customer-modal')">&times;</span>
+                </div>
+                <form id="customer-form">
+                    <div class="form-group">
+                        <label for="customer-email">Email</label>
+                        <input type="email" id="customer-email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-password">Password</label>
+                        <input type="password" id="customer-password" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="btn btn-customer submit-btn">Login</button>
+                </form>
+                <div class="register-link">
+                    New customer? <a href="#" onclick="openRegisterModal('customer')">Create an account</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delivery Login Modal -->
+        <div class="login-modal" id="delivery-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Delivery Partner Login</h2>
+                    <span class="close-modal" onclick="closeModal('delivery-modal')">&times;</span>
+                </div>
+                <form id="delivery-form">
+                    <div class="form-group">
+                        <label for="delivery-email">Email</label>
+                        <input type="email" id="delivery-email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="delivery-password">Password</label>
+                        <input type="password" id="delivery-password" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="btn btn-delivery submit-btn">Login</button>
+                </form>
+                <div class="register-link">
+                    Want to join as delivery partner? <a href="#" onclick="openRegisterModal('delivery')">Apply now</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Registration Modals -->
+        <div class="register-modal" id="shopkeeper-register-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Shopkeeper Registration</h2>
+                    <span class="close-modal" onclick="closeModal('shopkeeper-register-modal')">&times;</span>
+                </div>
+                <form id="shopkeeper-register-form">
+                    <div class="form-group">
+                        <label for="shopkeeper-reg-name">Shop Name</label>
+                        <input type="text" id="shopkeeper-reg-name" placeholder="Enter your shop name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="shopkeeper-reg-email">Email</label>
+                        <input type="email" id="shopkeeper-reg-email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="shopkeeper-reg-password">Password</label>
+                        <input type="password" id="shopkeeper-reg-password" placeholder="Create a password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="shopkeeper-reg-address">Shop Address</label>
+                        <textarea id="shopkeeper-reg-address" placeholder="Enter your shop address" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-shopkeeper submit-btn">Register</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="register-modal" id="customer-register-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Customer Registration</h2>
+                    <span class="close-modal" onclick="closeModal('customer-register-modal')">&times;</span>
+                </div>
+                <form id="customer-register-form">
+                    <div class="form-group">
+                        <label for="customer-reg-name">Full Name</label>
+                        <input type="text" id="customer-reg-name" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-reg-email">Email</label>
+                        <input type="email" id="customer-reg-email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-reg-password">Password</label>
+                        <input type="password" id="customer-reg-password" placeholder="Create a password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-reg-phone">Phone Number</label>
+                        <input type="tel" id="customer-reg-phone" placeholder="Enter your phone number" required>
+                    </div>
+                    <button type="submit" class="btn btn-customer submit-btn">Register</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="register-modal" id="delivery-register-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Delivery Partner Registration</h2>
+                    <span class="close-modal" onclick="closeModal('delivery-register-modal')">&times;</span>
+                </div>
+                <form id="delivery-register-form">
+                    <div class="form-group">
+                        <label for="delivery-reg-name">Full Name</label>
+                        <input type="text" id="delivery-reg-name" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="delivery-reg-email">Email</label>
+                        <input type="email" id="delivery-reg-email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="delivery-reg-password">Password</label>
+                        <input type="password" id="delivery-reg-password" placeholder="Create a password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="delivery-reg-vehicle">Vehicle Type</label>
+                        <select id="delivery-reg-vehicle" required>
+                            <option value="">Select vehicle</option>
+                            <option value="bike">Bike</option>
+                            <option value="scooter">Scooter</option>
+                            <option value="car">Car</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-delivery submit-btn">Apply</button>
+                </form>
+            </div>
+        </div>
+        
+        <footer>
+            <div class="container">
+                <p>&copy; 2023 QuickCart. All rights reserved.</p>
+                <p>A complete e-commerce solution for local businesses.</p>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Shopkeeper Dashboard -->
+    <div id="shopkeeper-dashboard" class="dashboard container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Shopkeeper Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+        
+        <div class="add-product-form">
+            <h2>Add New Product</h2>
+            <form id="add-product-form">
+                <div class="form-group">
+                    <label for="product-name">Product Name</label>
+                    <input type="text" id="product-name" placeholder="Enter product name" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-image">Product Image URL</label>
+                    <input type="text" id="product-image" placeholder="Enter image URL" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-price">Price (₹)</label>
+                    <input type="number" id="product-price" placeholder="Enter price" required min="1">
+                </div>
+                <div class="form-group">
+                    <label for="product-quantity">Quantity</label>
+                    <input type="text" id="product-quantity" placeholder="Enter quantity (e.g., 500ml, 2kg, 10 pieces)" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-description">Description</label>
+                    <textarea id="product-description" placeholder="Enter product description"></textarea>
+                </div>
+                <button type="submit" class="btn btn-shopkeeper submit-btn">Add Product</button>
+            </form>
+        </div>
+        
+        <h2>Your Products</h2>
+        <div class="product-list" id="shopkeeper-product-list">
+            <!-- Products will be added here dynamically -->
+        </div>
+        
+        <h2>Customer Orders</h2>
+        <div class="order-list" id="shopkeeper-order-list">
+            <!-- Orders will be added here dynamically -->
+        </div>
+    </div>
+    
+    <!-- Customer Dashboard -->
+    <div id="customer-dashboard" class="dashboard container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Customer Dashboard</h1>
+            <div class="header-actions">
+                <div class="cart-icon" onclick="toggleCart()">
+                    🛒 <span id="cart-count">0</span>
+                </div>
+                <button class="logout-btn" onclick="toggleOrders()">Orders</button>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+        
+        <div class="search-bar">
+            <input type="text" id="product-search" placeholder="Search for products...">
+        </div>
+        
+        <h2>Available Products</h2>
+        <div class="product-list" id="customer-product-list">
+            <!-- Products will be added here dynamically -->
+        </div>
+        
+        <div class="cart-modal" id="cart-modal" style="display:none;">
+            <h2>Your Cart</h2>
+            <div id="cart-items">
+                <p id="empty-cart-message">Your cart is empty</p>
+            </div>
+        </div>
+            
+            <div class="checkout-form">
+                <h3>Checkout</h3>
+                <form id="place-order-form">
+                    <div class="form-group">
+                        <label for="delivery-address">Delivery Address</label>
+                        <textarea id="delivery-address" placeholder="Enter your delivery address" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="delivery-phone">Phone Number</label>
+                        <input type="tel" id="delivery-phone" placeholder="Enter your phone number" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="delivery-time">Preferred Delivery Time</label>
+                        <input type="datetime-local" id="delivery-time" required>
+                    </div>
+                    <button type="submit" class="btn btn-customer submit-btn">Place Order</button>
+                </form>
+            </div>
+            <div id="customer-orders-section" style="display:none;">
+                <h2>Your Orders</h2>
+                <div class="order-list" id="customer-order-list">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delivery Dashboard -->
+    <div id="delivery-dashboard" class="dashboard container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Delivery Partner Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+        
+        <h2>Orders to Deliver</h2>
+        <div class="order-list" id="delivery-order-list">
+            <!-- Orders will be added here dynamically -->
+        </div>
+    </div>
+    
+    <script src="{% static 'js/gram.js' %}"></script>
+
+    
+        /<!-- Sample data for demonstration
+        
+        // Sample logins for testing:
+        // Shopkeeper: shop1@example.com / shop123
+        // Customer: customer1@example.com / customer123
+        // Delivery: delivery1@example.com / delivery123 -->
+    
+</body>
+</html> 

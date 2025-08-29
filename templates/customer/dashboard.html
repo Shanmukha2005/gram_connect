@@ -40,38 +40,88 @@
     <!-- Available Products Section -->
     <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
         <h3 style="margin-bottom: 15px; color: #333;">Available Products ({{ products|length }})</h3>
-        
-        <!-- Search Bar -->
-        <div style="margin-bottom: 20px;">
-            <input type="text" id="productSearch" placeholder="Search products by name..." 
-                   style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px;"
-                   onkeyup="filterProducts()">
+
+        <!-- Mode Toggle -->
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <button id="btn-all" onclick="showMode('all')" style="background: #007bff; color: white; padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer;">All Products (A–Z)</button>
+            <button id="btn-shop" onclick="showMode('shop')" style="background: #6c757d; color: white; padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer;">Shop-wise</button>
         </div>
-        
-        <div id="products-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
-            {% if products %}
-                {% for product in products %}
-                <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f9f9f9;">
-                    <h3 style="color: #333; margin-bottom: 10px;">{{ product.name }}</h3>
-                    {% if product.image %}
-                    <img src="{{ product.image }}" alt="{{ product.name }}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 5px; margin-bottom: 10px;" />
-                    {% endif %}
-                    <p style="font-size: 1.2em; font-weight: bold; color: #007bff; margin-bottom: 5px;">₹{{ product.price }}</p>
-                    <p style="color: #666; margin-bottom: 5px;">Quantity: {{ product.quantity }}</p>
-                    <p style="color: #666; margin-bottom: 5px;">Shop: {{ product.shopkeeper.name }}</p>
-                    <p style="color: #666; margin-bottom: 15px;">{{ product.description }}</p>
-                    <button onclick="addToCart({{ product.id }}, '{{ product.name|escapejs }}', {{ product.price }}, '{{ product.shopkeeper.name|escapejs }}')" 
-                            style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; width: 100%;">
-                        🛒 Add to Cart
-                    </button>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div style="text-align: center; padding: 40px;">
-                    <p style="color: #666; font-size: 1.1em;">No products available yet.</p>
-                    <p style="color: #666;">Check back later for new products!</p>
-                </div>
-            {% endif %}
+
+        <!-- All Products (Alphabetical) -->
+        <div id="all-section">
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="allSearch" placeholder="Search products by name..." 
+                       style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px;"
+                       onkeyup="filterAll()">
+            </div>
+
+            <div id="all-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                {% if products %}
+                    {% for product in products|dictsort:"name" %}
+                    <div class="product-card" style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f9f9f9;">
+                        <h3 style="color: #333; margin-bottom: 10px;">{{ product.name }}</h3>
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 5px; margin-bottom: 10px;" />
+                        {% endif %}
+                        <p style="font-size: 1.2em; font-weight: bold; color: #007bff; margin-bottom: 5px;">₹{{ product.price }}</p>
+                        <p style="color: #666; margin-bottom: 5px;">Quantity: {{ product.quantity }}</p>
+                        <p style="color: #666; margin-bottom: 5px;">Shop: {{ product.shopkeeper.name }}</p>
+                        <p style="color: #666; margin-bottom: 15px;">{{ product.description }}</p>
+                        <button onclick="addToCart({{ product.id }}, '{{ product.name|escapejs }}', {{ product.price }}, '{{ product.shopkeeper.name|escapejs }}')" 
+                                style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; width: 100%;">
+                            🛒 Add to Cart
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 40px;">
+                        <p style="color: #666; font-size: 1.1em;">No products available yet.</p>
+                        <p style="color: #666;">Check back later for new products!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Shop-wise Products -->
+        <div id="shop-section" style="display: none;">
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="shopSearch" placeholder="Search by product or shop name..." 
+                       style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px;"
+                       onkeyup="filterShopwise()">
+            </div>
+
+            <div id="shopwise-list" style="display: grid; gap: 20px;">
+                {% if products %}
+                    {% regroup products|dictsort:"shopkeeper.name" by shopkeeper as shop_groups %}
+                    {% for group in shop_groups %}
+                    <div class="shop-group" data-shop="{{ group.grouper.name|lower }}" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9;">
+                        <h3 style="margin: 0 0 10px 0; color: #333;">Shop: {{ group.grouper.name }}</h3>
+                        <div class="shop-products" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                            {% for product in group.list|dictsort:"name" %}
+                            <div class="product-card" style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: white;">
+                                <h3 style="color: #333; margin-bottom: 10px;">{{ product.name }}</h3>
+                                {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 5px; margin-bottom: 10px;" />
+                                {% endif %}
+                                <p style="font-size: 1.2em; font-weight: bold; color: #007bff; margin-bottom: 5px;">₹{{ product.price }}</p>
+                                <p style="color: #666; margin-bottom: 5px;">Quantity: {{ product.quantity }}</p>
+                                <p style="color: #666; margin-bottom: 15px;">{{ product.description }}</p>
+                                <button onclick="addToCart({{ product.id }}, '{{ product.name|escapejs }}', {{ product.price }}, '{{ group.grouper.name|escapejs }}')" 
+                                        style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; width: 100%;">
+                                    🛒 Add to Cart
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 40px;">
+                        <p style="color: #666; font-size: 1.1em;">No products available yet.</p>
+                        <p style="color: #666;">Check back later for new products!</p>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
     
@@ -130,7 +180,16 @@
                             <div style="margin-top: 5px;">
                                 {% for item in order.items.all %}
                                 <div style="display: flex; justify-content: space-between; padding: 5px 0;">
-                                    <span>{{ item.product.name }} × {{ item.quantity }}</span>
+                                    <span>
+                                        {% if item.product_name %}
+                                            {{ item.product_name }}
+                                        {% elif item.product %}
+                                            {{ item.product.name }}
+                                        {% else %}
+                                            [Deleted Product]
+                                        {% endif %}
+                                         × {{ item.quantity }}
+                                    </span>
                                     <span>₹{{ item.price }}</span>
                                 </div>
                                 {% endfor %}
@@ -262,6 +321,9 @@ document.addEventListener('DOMContentLoaded', function() {
             updateCartCount();
         }
     });
+
+    // Default view
+    showMode('all');
 });
 
 function addToCart(productId, productName, productPrice, shopName) {
@@ -311,7 +373,7 @@ function showCart() {
         cart.forEach((item, index) => {
             const itemTotal = item.price * item.quantity;
             total += itemTotal;
-            
+        
             cartItems.innerHTML += `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee;">
                     <div>
@@ -464,22 +526,70 @@ function showMessage(message, type) {
     }, 3000);
 }
 
-function filterProducts() {
-    const searchInput = document.getElementById('productSearch');
-    const productsGrid = document.getElementById('products-grid');
-    const products = productsGrid.children;
-    
-    const searchQuery = searchInput.value.toLowerCase();
-    
-    for (let i = 0; i < products.length; i++) {
-        const productName = products[i].querySelector('h3').textContent.toLowerCase();
-        
-        if (productName.includes(searchQuery)) {
-            products[i].style.display = 'block';
-        } else {
-            products[i].style.display = 'none';
-        }
+function setActiveButton(mode) {
+    const allBtn = document.getElementById('btn-all');
+    const shopBtn = document.getElementById('btn-shop');
+    if (!allBtn || !shopBtn) return;
+    if (mode === 'all') {
+        allBtn.style.background = '#007bff';
+        shopBtn.style.background = '#6c757d';
+    } else {
+        allBtn.style.background = '#6c757d';
+        shopBtn.style.background = '#007bff';
     }
+}
+
+function showMode(mode) {
+    const allSection = document.getElementById('all-section');
+    const shopSection = document.getElementById('shop-section');
+    if (!allSection || !shopSection) return;
+    if (mode === 'all') {
+        allSection.style.display = 'block';
+        shopSection.style.display = 'none';
+    } else {
+        allSection.style.display = 'none';
+        shopSection.style.display = 'block';
+    }
+    setActiveButton(mode);
+}
+
+function filterAll() {
+    const input = document.getElementById('allSearch');
+    const grid = document.getElementById('all-grid');
+    if (!input || !grid) return;
+    const q = input.value.trim().toLowerCase();
+    const cards = grid.children;
+    for (let i = 0; i < cards.length; i++) {
+        const name = (cards[i].querySelector('h3')?.textContent || '').toLowerCase();
+        cards[i].style.display = name.includes(q) ? 'block' : 'none';
+    }
+}
+
+function filterShopwise() {
+    const input = document.getElementById('shopSearch');
+    const list = document.getElementById('shopwise-list');
+    if (!input || !list) return;
+    const q = input.value.trim().toLowerCase();
+    const groups = list.querySelectorAll('.shop-group');
+    groups.forEach(group => {
+        const shopName = (group.getAttribute('data-shop') || '').toLowerCase();
+        const products = group.querySelectorAll('.product-card');
+        const shopMatches = shopName.includes(q);
+        let anyVisible = false;
+        if (shopMatches || q === '') {
+            // Show all products in this shop if shop name matches or empty query
+            products.forEach(card => { card.style.display = 'block'; });
+            anyVisible = products.length > 0;
+        } else {
+            products.forEach(card => {
+                const name = (card.querySelector('h3')?.textContent || '').toLowerCase();
+                const visible = name.includes(q);
+                card.style.display = visible ? 'block' : 'none';
+                if (visible) anyVisible = true;
+            });
+        }
+        group.style.display = anyVisible ? 'block' : 'none';
+    });
 }
 </script>
 {% endblock %}

@@ -50,5 +50,597 @@
         });
     </script>
     {% block extra_js %}{% endblock %}
+    <script>
+        (function(){
+            const bubble = document.createElement('div');
+            bubble.className = 'ai-bot-bubble';
+            bubble.title = 'AI Shopping Assistant';
+            bubble.innerHTML = '🤖';
+
+            const panel = document.createElement('div');
+            panel.className = 'ai-bot-panel';
+            panel.innerHTML = `
+                <div class="ai-bot-header">
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:18px;">🤖</span>
+                        <span>AI Shopping Assistant</span>
+                    </span>
+                    <button id="ai-close" class="ai-bot-close">×</button>
+                </div>
+    
+                <div class="ai-bot-quick-tips">
+                    <div class="ai-bot-quick-tips-title">💡 Quick Tips:</div>
+                    <div class="ai-bot-quick-tips-buttons">
+                        <button class="quick-tip" data-tip="Tell me about your delivery options">Delivery</button>
+                        <button class="quick-tip" data-tip="Tell me about your customer options">Customer</button>
+                        <button class="quick-tip" data-tip="Tell me about your shopkeeper options">Shopkeeper</button>
+                    </div>
+                </div>
+    
+                <div id="ai-chat-container" class="ai-bot-chat-container">
+                    <div id="ai-log" class="ai-bot-log"></div>
+                </div>
+    
+                <div class="ai-bot-input-container">
+                    <div class="ai-bot-input-wrapper">
+                        <input id="ai-input" class="ai-bot-input" placeholder="Ask me anything about shopping, orders, products..." />
+                        <button id="ai-send" class="ai-bot-send">➤</button>
+                </div>
+                </div>
+            `;
+
+            document.body.appendChild(bubble);
+            document.body.appendChild(panel);
+
+            let isTyping = false;
+
+            function logMsg(text, who, isTypingIndicator = false) {
+                const log = document.getElementById('ai-log');
+                
+                if (isTypingIndicator) {
+                    // Remove existing typing indicator
+                    const existingTyping = log.querySelector('.typing-indicator');
+                    if (existingTyping) existingTyping.remove();
+                    
+                    const row = document.createElement('div');
+                    row.className = 'ai-bot-message typing-indicator';
+                    
+                    const bubble = document.createElement('div');
+                    bubble.className = 'ai-bot-typing';
+                    bubble.innerHTML = '🤖 AI is typing...';
+                    
+                    row.appendChild(bubble);
+                    log.appendChild(row);
+                    log.scrollTop = log.scrollHeight;
+                    return;
+                }
+                
+                // Remove typing indicator if it exists
+                const existingTyping = log.querySelector('.typing-indicator');
+                if (existingTyping) existingTyping.remove();
+                
+                const row = document.createElement('div');
+                row.className = 'ai-bot-message';
+                
+                const bubble = document.createElement('div');
+                bubble.className = who === 'bot' ? 'ai-bot-message-bubble ai-bot-message-bot' : 'ai-bot-message-bubble ai-bot-message-user';
+                bubble.textContent = text;
+                
+                row.appendChild(bubble);
+                log.appendChild(row);
+                log.scrollTop = log.scrollHeight;
+            }
+
+            function appendButtons(title, buttons){
+                const log = document.getElementById('ai-log');
+                const wrap = document.createElement('div');
+                wrap.className = 'ai-bot-message';
+                const container = document.createElement('div');
+                container.className = 'ai-bot-message-bubble ai-bot-message-bot';
+                container.style.padding = '10px';
+                const heading = document.createElement('div');
+                heading.style.fontWeight = '600';
+                heading.style.marginBottom = '8px';
+                heading.textContent = title;
+                const btnRow = document.createElement('div');
+                btnRow.style.display = 'flex';
+                btnRow.style.flexWrap = 'wrap';
+                btnRow.style.gap = '8px';
+                buttons.forEach(b => {
+                    const btn = document.createElement('button');
+                    btn.textContent = b.label;
+                    btn.className = 'quick-tip';
+                    btn.style.borderRadius = '18px';
+                    btn.style.background = '#e8f0fe';
+                    btn.style.color = '#1a73e8';
+                    btn.setAttribute('data-action', b.action || 'link');
+                    if (b.href) btn.setAttribute('data-href', b.href);
+                    if (b.message) btn.setAttribute('data-message', b.message);
+                    btnRow.appendChild(btn);
+                });
+                container.appendChild(heading);
+                container.appendChild(btnRow);
+                wrap.appendChild(container);
+                log.appendChild(wrap);
+                log.scrollTop = log.scrollHeight;
+            }
+
+            // Conversational flows for step-by-step Login/Register
+            const convo = { state: null, role: null, buffer: {}, lastRole: null };
+
+            function startConvo(flow){
+                convo.state = flow; // e.g., 'customer_register', 'shopkeeper_login', 'delivery_register'
+                convo.buffer = {};
+                if(flow.endsWith('_login')){
+                    logMsg('Please enter your email:', 'bot');
+                } else if(flow.endsWith('_register')){
+                    if(flow.startsWith('customer')) logMsg('Let\'s create your customer account. What\'s your full name?', 'bot');
+                    if(flow.startsWith('shopkeeper')) logMsg('Let\'s create your shopkeeper account. What\'s your shop name?', 'bot');
+                    if(flow.startsWith('delivery')) logMsg('Let\'s create your delivery partner account. What\'s your full name?', 'bot');
+                }
+            }
+
+            // Text command navigation like "open dashboard", "customer orders"
+            function navigateShortcut(inputText){
+                const t = inputText.trim().toLowerCase();
+                const has = (w) => t.includes(w);
+
+                let role = null;
+                if(has('shopkeeper')) role = 'shopkeeper';
+                else if(has('customer')) role = 'customer';
+                else if(has('delivery')) role = 'delivery';
+                else if(convo.lastRole) role = convo.lastRole;
+
+                const wantsDashboard = has('dashboard') || has('open dashboard') || (has('open') && has('home'));
+                const wantsOrders = has('orders') || has('my orders') || has('view orders');
+                const wantsCart = has('cart') || has('my cart');
+                const wantsProducts = has('products') || has('browse') || has('shop') || has('view products');
+                const wantsAddProduct = has('add product') || (has('add') && has('product'));
+                const wantsLogin = has('login') || has('log in');
+                const wantsRegister = has('register') || has('sign up');
+
+                if(role === 'shopkeeper'){
+                    if(wantsDashboard) return '/shopkeeper/dashboard/';
+                    if(wantsAddProduct) return '/shopkeeper/dashboard/';
+                    if(wantsProducts) return '/shopkeeper/dashboard/';
+                    if(wantsOrders) return '/shopkeeper/dashboard/';
+                    if(wantsLogin) return '/shopkeeper/login/';
+                    if(wantsRegister) return '/shopkeeper/register/';
+                }
+                if(role === 'customer'){
+                    if(wantsDashboard || wantsProducts) return '/customer/dashboard/';
+                    if(wantsOrders) return '/customer/orders/';
+                    if(wantsCart) return '/customer/cart/';
+                    if(wantsLogin) return '/customer/login/';
+                    if(wantsRegister) return '/customer/register/';
+                }
+                if(role === 'delivery'){
+                    if(wantsDashboard) return '/delivery/dashboard/';
+                    if(wantsLogin) return '/delivery/login/';
+                    if(wantsRegister) return '/delivery/register/';
+                }
+
+                if(wantsDashboard){ return '/'; }
+                return null;
+            }
+
+            function handleNavigation(url, inputText){
+                if(!url) return false;
+                
+                const t = inputText.trim().toLowerCase();
+                const has = (w) => t.includes(w);
+                
+                // Check if we need to open specific sections after navigation
+                if(url.includes('/shopkeeper/dashboard/')) {
+                    // Store the intended action to trigger after page load
+                    sessionStorage.setItem('shopkeeperAction', 
+                        has('products') ? 'showProducts' : 
+                        has('orders') ? 'showOrders' : 
+                        has('add product') ? 'scrollToAddProduct' : 'none'
+                    );
+                }
+                
+                window.location.href = url;
+                return true;
+            }
+
+            async function handleConvoInput(text){
+                const t = text.trim();
+                if(!convo.state) return false;
+
+                // CUSTOMER FLOWS
+                if(convo.state === 'customer_login'){
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Enter your password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/customer/login/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Logged in as ${data.customer.name}` : `Login failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('customer'); }
+                    convo.state = null; return true;
+                }
+                if(convo.state === 'customer_register'){
+                    if(!convo.buffer.name){ convo.buffer.name = t; logMsg('Email address:', 'bot'); return true; }
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Phone number:', 'bot'); return true; }
+                    if(!convo.buffer.phone){ convo.buffer.phone = t; logMsg('Set a password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/customer/register/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Registered and logged in as ${data.customer.name}` : `Register failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('customer'); }
+                    convo.state = null; return true;
+                }
+
+                // SHOPKEEPER FLOWS
+                if(convo.state === 'shopkeeper_login'){
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Enter your password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/shopkeeper/login/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Logged in as ${data.shopkeeper.name}` : `Login failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('shopkeeper'); }
+                    convo.state = null; return true;
+                }
+                if(convo.state === 'shopkeeper_register'){
+                    if(!convo.buffer.name){ convo.buffer.name = t; logMsg('Email address:', 'bot'); return true; }
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Shop address:', 'bot'); return true; }
+                    if(!convo.buffer.address){ convo.buffer.address = t; logMsg('Set a password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/shopkeeper/register/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Registered shopkeeper ${data.shopkeeper.name}` : `Register failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('shopkeeper'); }
+                    convo.state = null; return true;
+                }
+
+                // DELIVERY FLOWS
+                if(convo.state === 'delivery_login'){
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Enter your password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/delivery/login/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Logged in as ${data.delivery.name}` : `Login failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('delivery'); }
+                    convo.state = null; return true;
+                }
+                if(convo.state === 'delivery_register'){
+                    if(!convo.buffer.name){ convo.buffer.name = t; logMsg('Email address:', 'bot'); return true; }
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Vehicle type:', 'bot'); return true; }
+                    if(!convo.buffer.vehicle){ convo.buffer.vehicle = t; logMsg('Set a password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/delivery/register/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Registered delivery partner ${data.delivery.name}` : `Register failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('delivery'); }
+                    convo.state = null; return true;
+                }
+
+                return false;
+            }
+
+            // Show role-specific buttons after successful auth
+            function showPostAuthMenu(role){
+                const r = role.toLowerCase();
+                if(r==='customer'){
+                    appendButtons('Customer shortcuts', [
+                        {label:'Browse Products', href:'/customer/dashboard/'},
+                        {label:'Cart', href:'/customer/cart/'},
+                        {label:'Orders', href:'/customer/orders/'},
+                        {label:'Logout', href:'/logout/'}
+                    ]);
+                    return;
+                }
+                if(r==='shopkeeper'){
+                    appendButtons('Shopkeeper shortcuts', [
+                        {label:'Dashboard', href:'/shopkeeper/dashboard/'},
+                        {label:'Add Product', href:'/shopkeeper/dashboard/#add-product'},
+                        {label:'View Products', href:'/shopkeeper/dashboard/#products'},
+                        {label:'View Orders', href:'/shopkeeper/dashboard/#orders'},
+                        {label:'Logout', href:'/logout/'}
+                    ]);
+                    return;
+                }
+                if(r==='delivery'){
+                    appendButtons('Delivery shortcuts', [
+                        {label:'Dashboard', href:'/delivery/dashboard/'},
+                        {label:'Logout', href:'/logout/'}
+                    ]);
+                    return;
+                }
+            }
+
+            async function handleConvoInput(text){
+                const t = text.trim();
+                if(!convo.state) return false;
+
+                // CUSTOMER FLOWS
+                if(convo.state === 'customer_login'){
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Enter your password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/customer/login/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Logged in as ${data.customer.name}` : `Login failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('customer'); }
+                    convo.state = null; return true;
+                }
+                if(convo.state === 'customer_register'){
+                    if(!convo.buffer.name){ convo.buffer.name = t; logMsg('Email address:', 'bot'); return true; }
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Phone number:', 'bot'); return true; }
+                    if(!convo.buffer.phone){ convo.buffer.phone = t; logMsg('Set a password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/customer/register/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Registered and logged in as ${data.customer.name}` : `Register failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('customer'); }
+                    convo.state = null; return true;
+                }
+
+                // SHOPKEEPER FLOWS
+                if(convo.state === 'shopkeeper_login'){
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Enter your password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/shopkeeper/login/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Logged in as ${data.shopkeeper.name}` : `Login failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('shopkeeper'); }
+                    convo.state = null; return true;
+                }
+                if(convo.state === 'shopkeeper_register'){
+                    if(!convo.buffer.name){ convo.buffer.name = t; logMsg('Email address:', 'bot'); return true; }
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Shop address:', 'bot'); return true; }
+                    if(!convo.buffer.address){ convo.buffer.address = t; logMsg('Set a password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/shopkeeper/register/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Registered shopkeeper ${data.shopkeeper.name}` : `Register failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('shopkeeper'); }
+                    convo.state = null; return true;
+                }
+
+                // DELIVERY FLOWS
+                if(convo.state === 'delivery_login'){
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Enter your password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/delivery/login/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Logged in as ${data.delivery.name}` : `Login failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('delivery'); }
+                    convo.state = null; return true;
+                }
+                if(convo.state === 'delivery_register'){
+                    if(!convo.buffer.name){ convo.buffer.name = t; logMsg('Email address:', 'bot'); return true; }
+                    if(!convo.buffer.email){ convo.buffer.email = t; logMsg('Vehicle type:', 'bot'); return true; }
+                    if(!convo.buffer.vehicle){ convo.buffer.vehicle = t; logMsg('Set a password:', 'bot'); return true; }
+                    if(!convo.buffer.password){ convo.buffer.password = t; }
+                    const res = await fetch('/api/delivery/register/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify(convo.buffer)});
+                    const data = await res.json();
+                    logMsg(data.success ? `Registered delivery partner ${data.delivery.name}` : `Register failed: ${data.error||'Unknown error'}`,'bot');
+                    if(data.success){ showPostAuthMenu('delivery'); }
+                    convo.state = null; return true;
+                }
+
+                return false;
+            }
+
+            // Hook buttons to start flows
+            function showRoleMenu(role){
+                const r = role.toLowerCase();
+                if(r.includes('shopkeeper')){
+                    appendButtons('Shopkeeper options', [
+                        {label:'Register', message:'__FLOW__:shopkeeper_register'},
+                        {label:'Login', message:'__FLOW__:shopkeeper_login'},
+                        {label:'Dashboard', href:'/shopkeeper/dashboard/'},
+                        {label:'Manage Products', href:'/shopkeeper/dashboard/'},
+                        {label:'View Orders', href:'/shopkeeper/dashboard/'}
+                    ]);
+                    return true;
+                }
+                if(r.includes('customer')){
+                    appendButtons('Customer options', [
+                        {label:'Register', message:'__FLOW__:customer_register'},
+                        {label:'Login', message:'__FLOW__:customer_login'},
+                        {label:'Browse Products', href:'/customer/dashboard/'},
+                        {label:'Cart', href:'/customer/cart/'},
+                        {label:'Orders', href:'/customer/orders/'}
+                    ]);
+                    return true;
+                }
+                if(r.includes('delivery')){
+                    appendButtons('Delivery partner options', [
+                        {label:'Register', message:'__FLOW__:delivery_register'},
+                        {label:'Login', message:'__FLOW__:delivery_login'},
+                        {label:'Dashboard', href:'/delivery/dashboard/'}
+                    ]);
+                    return true;
+                }
+                return false;
+            }
+
+            function handleQuickCommands(text){
+                const t = text.toLowerCase();
+                // Shopkeeper actions
+                if(t.includes('add product')){ appendButtons('Add Product', [{label:'Open Dashboard', href:'/shopkeeper/dashboard/'}]); return true; }
+                if(t.includes('edit product')){ appendButtons('Edit Product', [{label:'Open Dashboard', href:'/shopkeeper/dashboard/'}]); return true; }
+                if(t.includes('delete product')){ appendButtons('Delete Product', [{label:'Open Dashboard', href:'/shopkeeper/dashboard/'}]); return true; }
+                if(t.includes('orders')){
+                    appendButtons('Orders', [
+                        {label:'Customer Orders', href:'/customer/orders/'},
+                        {label:'Shopkeeper Orders', href:'/shopkeeper/dashboard/'},
+                        {label:'Delivery Dashboard', href:'/delivery/dashboard/'}
+                    ]);
+                    return true;
+                }
+                return false;
+            }
+
+            function handleGenericIntents(text){
+                const t = text.toLowerCase();
+                const mentionsLogin = t.includes('login') || t.includes('log in') || t.includes('sign in');
+                const mentionsRegister = t.includes('register') || t.includes('sign up') || t.includes('create account');
+                const mentionsDashboard = t.includes('dashboard') || t.includes('open my dashboard') || (t.includes('open') && t.includes('dashboard'));
+
+                if(!(mentionsLogin || mentionsRegister || mentionsDashboard)) return false;
+
+                const inferRole = () => {
+                    if(t.includes('shopkeeper')) return 'shopkeeper';
+                    if(t.includes('customer')) return 'customer';
+                    if(t.includes('delivery')) return 'delivery';
+                    return convo.lastRole || null;
+                };
+
+                const role = inferRole();
+
+                if(mentionsLogin){
+                    if(role){ startConvo(`${role}_login`); return true; }
+                    appendButtons('Who do you want to login as?', [
+                        {label:'Shopkeeper Login', message:'__FLOW__:shopkeeper_login'},
+                        {label:'Customer Login', message:'__FLOW__:customer_login'},
+                        {label:'Delivery Login', message:'__FLOW__:delivery_login'}
+                    ]);
+                    return true;
+                }
+                if(mentionsRegister){
+                    if(role){ startConvo(`${role}_register`); return true; }
+                    appendButtons('Create account as:', [
+                        {label:'Shopkeeper Register', message:'__FLOW__:shopkeeper_register'},
+                        {label:'Customer Register', message:'__FLOW__:customer_register'},
+                        {label:'Delivery Register', message:'__FLOW__:delivery_register'}
+                    ]);
+                    return true;
+                }
+                if(mentionsDashboard){
+                    const targetRole = role;
+                    if(targetRole === 'shopkeeper'){ handleNavigation('/shopkeeper/dashboard/', text); return true; }
+                    if(targetRole === 'customer'){ handleNavigation('/customer/dashboard/', text); return true; }
+                    if(targetRole === 'delivery'){ handleNavigation('/delivery/dashboard/', text); return true; }
+                    appendButtons('Open dashboard for:', [
+                        {label:'Shopkeeper', href:'/shopkeeper/dashboard/'},
+                        {label:'Customer', href:'/customer/dashboard/'},
+                        {label:'Delivery', href:'/delivery/dashboard/'}
+                    ]);
+                    return true;
+                }
+                return false;
+            }
+
+            async function sendMessage(message) {
+                if (!message.trim() || isTyping) return;
+                
+                // Add user message
+                logMsg(message, 'user');
+
+                // Intercept generic intents (login/register/dashboard)
+                if (handleGenericIntents(message)){
+                    return;
+                }
+
+                // Intercept role menus and quick commands locally
+                if (showRoleMenu(message) || handleQuickCommands(message)){
+                    return;
+                }
+                
+                // Show typing indicator
+                isTyping = true;
+                logMsg('', 'bot', true);
+                
+                try {
+                    const response = await fetch('/api/ai/chat/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Remove typing indicator and add AI response
+                        setTimeout(() => {
+                            logMsg(data.response, 'bot');
+                        }, 500);
+                    } else {
+                        logMsg('Sorry, I encountered an error. Please try again.', 'bot');
+                    }
+                } catch (error) {
+                    logMsg('Sorry, I\'m having trouble connecting. Please check your internet connection.', 'bot');
+                } finally {
+                    isTyping = false;
+                }
+            }
+    
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+    
+            bubble.addEventListener('click', () => {
+                const show = panel.style.display !== 'flex';
+                panel.style.display = show ? 'flex' : 'none';
+                if (show) {
+                    panel.style.flexDirection = 'column';
+                    setTimeout(() => { document.getElementById('ai-input').focus(); }, 100);
+                }
+            });
+            panel.querySelector('#ai-close').addEventListener('click', () => { panel.style.display = 'none'; });
+    
+            // Enhance quick-tip handler to start flows when message starts with __FLOW__
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('quick-tip')) {
+                    const href = e.target.getAttribute('data-href');
+                    const message = e.target.getAttribute('data-message');
+                    const tip = e.target.getAttribute('data-tip');
+                    if (href) { window.location.href = href; return; }
+                    const m = message || tip;
+                    if(m){
+                        if(m.startsWith('__FLOW__:')){
+                            const flow = m.replace('__FLOW__:', '');
+                            startConvo(flow);
+                        } else {
+                            sendMessage(m);
+                        }
+                    }
+                }
+            });
+
+            // Intercept user input to feed into conversation or open shortcuts
+            document.getElementById('ai-send').addEventListener('click', async () => {
+                const input = document.getElementById('ai-input');
+                const text = input.value.trim();
+                if (!text) return;
+                // Check for navigation shortcuts first
+                const nav = navigateShortcut(text);
+                if(nav){ logMsg(text,'user'); if(handleNavigation(nav, text)) { input.value = ''; return; } }
+                if (await handleConvoInput(text)) { input.value = ''; return; }
+                sendMessage(text);
+                input.value = '';
+            });
+            document.getElementById('ai-input').addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                const input = document.getElementById('ai-input');
+                const text = input.value.trim();
+                    if (!text) return;
+                    const nav = navigateShortcut(text);
+                    if(nav){ logMsg(text,'user'); if(handleNavigation(nav, text)) { input.value = ''; return; } }
+                    if (await handleConvoInput(text)) { input.value = ''; return; }
+                    sendMessage(text);
+                    input.value = '';
+                }
+            });
+    
+            panel.style.display = 'none';
+            logMsg('Hello! I\'m your AI shopping assistant. Ask me about products, orders, payments, and delivery.', 'bot');
+        })();
+    </script>
 </body>
 </html>

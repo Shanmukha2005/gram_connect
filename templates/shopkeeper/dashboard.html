@@ -9,19 +9,146 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <p style="color: #666;">Welcome, {{ shopkeeper.name }}!</p>
             <div style="display: flex; gap: 15px; align-items: center;">
-                <button onclick="showOrdersModal()" style="background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;">
-                    📋 Orders 
-                    <span style="background: #fff; color: #007bff; padding: 2px 6px; border-radius: 10px; font-size: 12px;">{{ pending_orders_count }}</span>
+                <button onclick="showProductsModal()" style="background: #17a2b8; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                    🛍️ Products <span class="badge" style="background: #fff; color: #17a2b8; padding: 2px 6px; border-radius: 10px; font-size: 12px;">{{ products|length }}</span>
+                </button>
+                <button onclick="showOrdersModal()" style="background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                    📋 Orders <span class="badge" style="background: #fff; color: #007bff; padding: 2px 6px; border-radius: 10px; font-size: 12px;">{{ pending_orders_count }}</span>
                 </button>
                 <a href="{% url 'logout' %}" style="background: #dc3545; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;">Logout</a>
             </div>
         </div>
     </div>
-    
+
+    <!-- Products Modal -->
+    <div id="products-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+        <div style="position: relative; max-width: 1000px; margin: 30px auto; background: white; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+            <div style="position: sticky; top: 0; background: white; padding: 20px; border-bottom: 1px solid #eee; z-index: 10;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0; color: #333;">🛍️ Your Products</h2>
+                    <button onclick="closeProductsModal()" style="background: #dc3545; color: white; border: none; border-radius: 5px; width: 30px; height: 30px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;">×</button>
+                </div>
+                
+                <!-- Search Bar -->
+                <div style="position: relative; margin-bottom: 15px;">
+                    <input type="text" id="product-search" placeholder="Search products..." 
+                           style="width: 100%; padding: 10px 15px 10px 40px; border: 1px solid #ddd; border-radius: 25px; font-size: 14px;"
+                           onkeyup="filterProducts()">
+                    <span style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #6c757d;">
+                        🔍
+                    </span>
+                </div>
+            </div>
+            
+            <div style="padding: 0 20px 20px 20px;">
+                {% if products %}
+                    <div id="products-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                        {% for product in products %}
+                        <div class="product-item" data-name="{{ product.name|lower }}" data-description="{{ product.description|lower }}" 
+                             style="border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; background: white;">
+                            {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" 
+                                 style="width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid #eee;">
+                            {% else %}
+                            <div style="width: 100%; height: 180px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; color: #999; border-bottom: 1px solid #eee;">
+                                No Image Available
+                            </div>
+                            {% endif %}
+                            <div style="padding: 15px;">
+                                <h4 style="margin: 0 0 10px 0; color: #333; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ product.name }}">
+                                    {{ product.name }}
+                                </h4>
+                                <p style="margin: 5px 0; color: #28a745; font-weight: bold;">₹{{ product.price }}</p>
+                                <p style="margin: 5px 0; color: #6c757d; font-size: 14px;">Qty: {{ product.quantity }}</p>
+                                <div style="display: flex; gap: 10px; margin-top: 12px;">
+                                    <a href="{% url 'edit_product' product.id %}" 
+                                       style="flex: 1; background: #17a2b8; color: white; text-align: center; padding: 6px 0; border-radius: 4px; text-decoration: none; font-size: 14px; transition: background 0.2s;">
+                                        Edit
+                                    </a>
+                                    <form method="post" action="{% url 'delete_product' product.id %}" style="flex: 1; margin: 0;">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                style="width: 100%; background: #dc3545; color: white; border: none; border-radius: 4px; padding: 6px 0; font-size: 14px; cursor: pointer; transition: background 0.2s;"
+                                                onclick="return confirm('Are you sure you want to delete this product?')">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div style="text-align: center; padding: 40px 20px;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📦</div>
+                        <h3 style="color: #6c757d; margin-bottom: 10px;">No Products Yet</h3>
+                        <p style="color: #6c757d; margin-bottom: 20px;">You haven't added any products yet. Start by adding your first product!</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div style="padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #eee; display: flex; justify-content: flex-end;">
+                <button onclick="closeProductsModal()" style="background: #6c757d; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer;">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Products modal functions
+        function showProductsModal() {
+            document.getElementById('products-modal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            // Focus on search input when modal opens
+            setTimeout(() => {
+                const searchInput = document.getElementById('product-search');
+                if (searchInput) searchInput.focus();
+            }, 100);
+        }
+
+        function closeProductsModal() {
+            document.getElementById('products-modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            // Clear search when closing
+            const searchInput = document.getElementById('product-search');
+            if (searchInput) searchInput.value = '';
+            filterProducts(); // Reset filter
+        }
+
+        // Filter products based on search input
+        function filterProducts() {
+            const searchTerm = document.getElementById('product-search').value.toLowerCase();
+            const products = document.querySelectorAll('.product-item');
+            
+            products.forEach(product => {
+                const name = product.getAttribute('data-name');
+                const description = product.getAttribute('data-description') || '';
+                const matchesSearch = name.includes(searchTerm) || description.includes(searchTerm);
+                product.style.display = matchesSearch ? 'block' : 'none';
+            });
+        }
+
+        // Close modal when clicking outside the content
+        window.onclick = function(event) {
+            const modal = document.getElementById('products-modal');
+            if (event.target === modal) {
+                closeProductsModal();
+            }
+        };
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeProductsModal();
+            }
+        });
+    </script>
+
     <!-- Add Product Form -->
     <div style="margin-bottom: 30px; background: #f8f9fa; padding: 20px; border-radius: 8px;">
         <h2 style="color: #333; margin-bottom: 15px;">Add New Product</h2>
-        <form method="post" action="{% url 'add_product' %}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <form method="post" action="{% url 'add_product' %}" enctype="multipart/form-data" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             {% csrf_token %}
             <div>
                 <label style="display: block; margin-bottom: 5px; color: #333;">Product Name</label>
@@ -42,12 +169,13 @@
             </div>
             
             <div>
-                <label style="display: block; margin-bottom: 5px; color: #333;">Image URL (Optional)</label>
-                <input type="url" name="image" placeholder="https://example.com/image.jpg"
-                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                <label style="display: block; margin-bottom: 5px; color: #333;">Product Image</label>
+                <input type="file" name="image" accept="image/*"
+                       style="width: 100%; padding: 8px 0;">
+                <p style="font-size: 12px; color: #6c757d; margin: 5px 0 0 0;">Upload product image (optional)</p>
             </div>
             
-            <div>
+            <div style="grid-column: 1 / -1;">
                 <label style="display: block; margin-bottom: 5px; color: #333;">Description</label>
                 <textarea name="description" placeholder="Enter product description" rows="3"
                           style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
@@ -62,7 +190,7 @@
     </div>
     
     <!-- Orders Section -->
-<button onclick="showOrdersModal()" style="background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;">
+    <button onclick="showOrdersModal()" style="background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;">
         📋 Orders 
         <span style="background: #fff; color: #007bff; padding: 2px 6px; border-radius: 10px; font-size: 12px;">{{ pending_orders_count }}</span>
     </button>
@@ -76,24 +204,24 @@
             </div>
 
             {% if orders %}
-<div id="orders-container" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                <div id="orders-container" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
                     {% for order in orders %}
                     <div class="order-item" style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f9f9f9;">
                         <h3 style="color: #333;">Order #{{ order.id }}</h3>
-                    <p><strong>Status:</strong> 
-                        <span id="order-status-{{ order.id }}" style="padding: 4px 8px; border-radius: 4px; background: 
-                            {% if order.status == 'pending' %}#ffc107{% elif order.status == 'confirmed' %}#007bff{% elif order.status == 'ready' %}#28a745{% elif order.status == 'delivered' %}#6c757d{% else %}#dc3545{% endif %};
-                            color: {% if order.status == 'pending' %}black{% else %}white{% endif %}; font-size: 0.9em;">
-                            {{ order.status|title }}
-                        </span>
-                    </p>
-                    {% if order.status == 'pending' %}
-                        <button id="mark-ready-btn-{{ order.id }}" onclick="markAsReady({{ order.id }})" style="background: #28a745; color: white; border: none; border-radius: 5px; padding: 6px 12px; cursor: pointer; margin-top: 5px;">
-                            Mark as Ready
-                        </button>
-                    {% endif %}
+                        <p><strong>Status:</strong> 
+                            <span id="order-status-{{ order.id }}" style="padding: 4px 8px; border-radius: 4px; background: 
+                                {% if order.status == 'pending' %}#ffc107{% elif order.status == 'confirmed' %}#007bff{% elif order.status == 'ready' %}#28a745{% elif order.status == 'delivered' %}#6c757d{% else %}#dc3545{% endif %};
+                                color: {% if order.status == 'pending' %}black{% else %}white{% endif %}; font-size: 0.9em;">
+                                {{ order.status|title }}
+                            </span>
+                        </p>
+                        {% if order.status == 'pending' %}
+                            <button id="mark-ready-btn-{{ order.id }}" onclick="markAsReady({{ order.id }})" style="background: #28a745; color: white; border: none; border-radius: 5px; padding: 6px 12px; cursor: pointer; margin-top: 5px;">
+                                Mark as Ready
+                            </button>
+                        {% endif %}
                         <p><strong>Date:</strong> {{ order.date|date:"M d, Y" }}</p>
-                        <p><strong>Total:</strong> ${{ order.total_amount }}</p>
+                        <p><strong>Total:</strong> ₹{{ order.total_amount }}</p>
 
                         <h4>Items:</h4>
                         <table class="table">
@@ -108,10 +236,10 @@
                             <tbody>
                                 {% for item in order.items.all %}
                                 <tr>
-                                    <td>{{ item.product.name }}</td>
+                                    <td>{{ item.product_name|default:item.product.name|default:"[Deleted Product]" }}</td>
                                     <td>{{ item.quantity }}</td>
-                                    <td>${{ item.price }}</td>
-                                    <td>${{ item.quantity|floatformat:2|add:item.price|floatformat:2 }}</td>
+                                    <td>₹{{ item.price }}</td>
+                                    <td>₹{{ item.subtotal|floatformat:2 }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -154,6 +282,34 @@
             // This would typically make an AJAX call to refresh orders
             console.log('Refreshing orders...');
         }, 30000);
+
+        // Check for bot navigation actions
+        document.addEventListener('DOMContentLoaded', function() {
+            const action = sessionStorage.getItem('shopkeeperAction');
+            if (action) {
+                sessionStorage.removeItem('shopkeeperAction'); // Clear after use
+                
+                // Small delay to ensure page is fully loaded
+                setTimeout(() => {
+                    switch(action) {
+                        case 'showProducts':
+                            showProductsModal();
+                            break;
+                        case 'showOrders':
+                            showOrdersModal();
+                            break;
+                        case 'scrollToAddProduct':
+                            // Scroll to add product form
+                            const addProductForm = document.querySelector('form[action*="add_product"]');
+                            if (addProductForm) {
+                                addProductForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                            break;
+                    }
+                }, 300);
+            }
+        });
+
         function markAsReady(orderId) {
             const csrftoken = getCookie('csrftoken');
             fetch(`/shopkeeper/update-order/${orderId}/`, {

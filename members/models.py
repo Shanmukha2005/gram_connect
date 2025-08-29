@@ -64,10 +64,15 @@ class DeliveryPartner(models.Model):
 class Product(models.Model):
     shopkeeper = models.ForeignKey(Shopkeeper, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
-    image = models.URLField()
+    image = models.ImageField(upload_to='product_images/', blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.CharField(max_length=50)
     description = models.TextField()
+
+    def has_orders(self):
+        """Check if this product has any orders"""
+        # Removed self.order_set as Order no longer has product FK
+        return OrderItem.objects.filter(product=self).exists()
 
 class Order(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
@@ -93,15 +98,25 @@ class Order(models.Model):
         ('cancelled', 'Cancelled')
     ], default='pending')
     date = models.DateTimeField(auto_now_add=True)
+    # Removed product foreign key as orders can have multiple products via OrderItem
+    # product = models.ForeignKey(Product, on_delete=models.CASCADE)
+
 
     def __str__(self):
         return f"Order #{self.id} - {self.customer.name} from {self.shopkeeper.name}"
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField(default=1)
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
+    product_name = models.CharField(max_length=255, null=True, blank=True)
+    quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
+
+
     def __str__(self):
-        return f"{self.product.name} x{self.quantity} in Order #{self.order.id}"
+        return f"{self.product.name if self.product else '[Deleted Product]'} x{self.quantity} in Order #{self.order.id}"
+
+    @property
+    def subtotal(self):
+        return self.quantity * self.price

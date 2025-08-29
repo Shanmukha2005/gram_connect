@@ -2,14 +2,14 @@
 {% block title %}Your Orders{% endblock %}
 {% block content %}
 <div class="order-list container">
-    <h2>Your Orders</h2>
+            <h2>Your Orders</h2>
     {% if orders %}
         {% for order in orders %}
         <div class="order-item">
             <h3>Order #{{ order.id }}</h3>
             <p><strong>Status:</strong> {{ order.status|title }}</p>
             <p><strong>Date:</strong> {{ order.date|date:"M d, Y" }}</p>
-            <p><strong>Total:</strong> ${{ order.total_amount }}</p>
+            <p><strong>Total:</strong> ₹{{ order.total_amount }}</p>
             
             <h4>Items:</h4>
             <table class="table">
@@ -24,10 +24,10 @@
                 <tbody>
                     {% for item in order.items.all %}
                     <tr>
-                        <td>{{ item.product.name }}</td>
+                        <td>{{ item.product_name|default:item.product.name|default:"[Deleted Product]" }}</td>
                         <td>{{ item.quantity }}</td>
-                        <td>${{ item.price }}</td>
-                        <td>${{ item.quantity|floatformat:2|add:item.price|floatformat:2 }}</td>
+                        <td>₹{{ item.price }}</td>
+                        <td>₹{{ item.subtotal|floatformat:2 }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

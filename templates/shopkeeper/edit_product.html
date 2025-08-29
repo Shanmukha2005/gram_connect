@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Product{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 20px auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+        <h1 style="color: #333; margin: 0;">✏️ Edit Product</h1>
+        <a href="{% url 'shopkeeper_dashboard' %}" style="color: #6c757d; text-decoration: none; font-size: 14px;">← Back to Dashboard</a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        {% csrf_token %}
+        
+        <!-- Left Column -->
+        <div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">Product Name</label>
+                <input type="text" name="name" value="{{ product.name }}" required
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">Price (₹)</label>
+                <input type="number" name="price" value="{{ product.price }}" min="0.01" step="0.01" required
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">Quantity</label>
+                <input type="text" name="quantity" value="{{ product.quantity }}" required
+                       placeholder="e.g., 1kg, 500ml, 10 pieces"
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+        </div>
+        
+        <!-- Right Column -->
+        <div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">Product Image</label>
+                {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" 
+                         style="width: 100%; max-height: 200px; object-fit: contain; margin-bottom: 10px; border: 1px solid #eee; border-radius: 5px;">
+                {% endif %}
+                <input type="file" name="image" accept="image/*"
+                       style="width: 100%; padding: 8px 0;">
+                <p style="font-size: 12px; color: #6c757d; margin: 5px 0 0 0;">Leave empty to keep current image</p>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">Description</label>
+                <textarea name="description" rows="4" 
+                          style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;">{{ product.description }}</textarea>
+            </div>
+        </div>
+        
+        <!-- Full Width Actions -->
+        <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 15px; margin-top: 10px; border-top: 1px solid #eee; padding-top: 20px;">
+            <a href="{% url 'shopkeeper_dashboard' %}" 
+               style="background: #6c757d; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-size: 14px;">
+                Cancel
+            </a>
+            <button type="submit" 
+                    style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
